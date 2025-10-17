@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # Serviço do Banco de Dados PostgreSQL
+  postgres_db:
+    image: postgres:15
+    container_name: assetforge_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+      POSTGRES_DB: assetforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - assetforge_net
+
+  # Serviço do Message Broker RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: assetforge_rabbitmq
+    ports:
+      - "5672:5672"  # Porta para comunicação dos serviços
+      - "15672:15672" # Porta para a interface de gerenciamento web
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+    networks:
+      - assetforge_net
+
+volumes:
+  postgres_data:
+
+networks:
+  assetforge_net:
+    driver: bridge
