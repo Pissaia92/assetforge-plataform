@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo para Departamentos da empresa
+model Department {
+  id        Int      @id @default(autoincrement()) // Chave primária, autoincremento
+  name      String   @unique // Nome do departamento, deve ser único
+  employees Employee[] // Relação: um departamento pode ter vários funcionários
+}
+
+// Modelo para Funcionários (usuários do sistema)
+model Employee {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique // Email para login, deve ser único
+  name         String
+  password     String // A senha será armazenada como um hash
+  createdAt    DateTime   @default(now()) // Data de criação, padrão é agora
+  updatedAt    DateTime   @updatedAt // Data de atualização, atualizada automaticamente
+
+  // Relação: um funcionário pertence a um departamento
+  department   Department @relation(fields: [departmentId], references: [id])
+  departmentId Int
+}
