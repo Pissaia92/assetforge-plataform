@@ -1,82 +1,80 @@
-import os
-from dotenv import load_dotenv
+# Módulos padrão para configuração de logging e caminhos de arquivo
 from logging.config import fileConfig
+
+# Componentes do SQLAlchemy para criar a engine e gerenciar o pool de conexões
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from alembic import context
-from models import Base
-target_metadata = Base.metadata
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# O objeto de contexto principal do Alembic, que gerencia o estado da migração
+from alembic import context
+
+# Importa a 'Base' declarativa do arquivo de modelos.
+# Isso é crucial para que o Alembic possa detectar as tabelas e colunas
+# em código Python.
+from models import Base
+
+# O objeto de configuração do Alembic, que fornece acesso programático
+# aos valores definidos no arquivo alembic.ini.
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# Interpreta o arquivo alembic.ini para configurar o sistema de logging do Python.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# --- INÍCIO DA NOSSA CORREÇÃO ---
-
-# Adicione seus modelos aqui para o autogenerate funcionar
-# Importamos a Base do nosso arquivo de modelos
-from models import Base
-print("--- DIAGNÓSTICO: Consegui importar 'Base' do arquivo models.py ---")
-
-# E definimos o target_metadata com as informações dos nossos modelos
+# Define o target_metadata. Este é o passo mais importante para o autogenerate.
+# O Alembic compara este MetaData object (que contém a definição das tabelas
+# a partir do models.py) com o estado atual do banco de dados para gerar os scripts
+# de migração.
 target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
+    """Executa as migrações em modo 'offline'.
 
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
+    Este modo configura o contexto apenas com uma URL de banco de dados,
+    sem a necessidade de uma Engine. Ele não se conecta ao banco, mas
+    gera os scripts SQL que podem ser aplicados manualmente.
     """
+    # Obtém a URL do banco de dados a partir do arquivo alembic.ini
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
-        literal_binds=True,
+        literal_binds=True, # Garante que os valores literais sejam renderizados no script SQL
         dialect_opts={"paramstyle": "named"},
     )
 
+    # Inicia uma transação e executa o processo de migração.
     with context.begin_transaction():
         context.run_migrations()
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
+    """Executa as migrações em modo 'online'.
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
+    Neste modo, uma Engine do SQLAlchemy é criada e uma conexão
+    com o banco de dados é estabelecida para aplicar as migrações diretamente.
     """
+    # Cria uma Engine a partir da seção de configuração [alembic] do alembic.ini.
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
+        poolclass=pool.NullPool, # Evita problemas de concorrência com o pool de conexões.
     )
 
+    # Estabelece uma conexão com o banco de dados.
     with connectable.connect() as connection:
+        # Configura o contexto do Alembic com a conexão ativa e o nosso metadata.
         context.configure(
             connection=connection, target_metadata=target_metadata
         )
 
+        # Inicia uma transação e executa o processo de migração.
         with context.begin_transaction():
             context.run_migrations()
 
+# Determina se o Alembic está sendo executado em modo offline ou online
+# e chama a função correspondente.
 if context.is_offline_mode():
     run_migrations_offline()
 else:
