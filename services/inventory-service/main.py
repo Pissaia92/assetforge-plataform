@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 import crud, models, schemas
 from database import SessionLocal, engine
 import security
+from fastapi.middleware.cors import CORSMiddleware
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -12,6 +13,13 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3001"],  # Permitir apenas o seu frontend
+    allow_credentials=True,
+    allow_methods=["*"],  # Permitir todos os métodos (GET, POST, PUT, DELETE, etc)
+    allow_headers=["*"],
+)    
 # Função de Dependência do Banco de Dados
 def get_db():
     db = SessionLocal()
