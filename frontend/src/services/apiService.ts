@@ -16,7 +16,7 @@ export const apiService = {
 
   login: async (email: string, password: string) => {
     const response = await api.post('/auth/login', { email, password });
-    return response.data;
+    return response.data; // Retorna { access_token, user }
   },
 
   // Nova função para buscar ativos
@@ -45,6 +45,41 @@ export const apiService = {
             // window.location.href = '/login';
         }
         // Lança o erro para que o componente possa lidar
+        throw error;
+    }
+  },
+
+  // Nova função para criar um ativo
+  createAsset: async (assetData: { name: string; assetNumber: string; type: string; status: string; departmentId: number }) => {
+    const token = localStorage.getItem('access_token'); // Obtém o token do localStorage
+    if (!token) {
+      throw new Error('No access token found. Please log in.');
+    }
+
+    const inventoryApi = axios.create({
+      baseURL: INVENTORY_BASE_URL, // Usa a URL do Serviço de Inventário
+    });
+
+    // Adiciona o token no cabeçalho Authorization e o Content-Type
+    inventoryApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    inventoryApi.defaults.headers.post['Content-Type'] = 'application/json'; // Define o tipo de conteúdo como JSON
+
+    try {
+      const response = await inventoryApi.post('/assets/', assetData); // Faz a requisição POST para /assets/
+      return response.data; // Retorna os dados do ativo recém-criado
+    } catch (error: any) {
+        // Verifica se o erro é de autenticação (401) ou de validação (422, 400)
+        if (error.response && (error.response.status === 401 || error.response.status === 422 || error.response.status === 400)) {
+            // Opcional: Limpar o token inválido/local expirado
+            if (error.response.status === 401) {
+                localStorage.removeItem('access_token');
+                // Opcional: Redirecionar para login
+                // window.location.href = '/login';
+            }
+            // Lança o erro original para que o componente possa lidar com mensagens específicas
+            throw error;
+        }
+        // Lança outros erros genéricos
         throw error;
     }
   }

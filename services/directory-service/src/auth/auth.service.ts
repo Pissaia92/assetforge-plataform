@@ -71,7 +71,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { sub: employee.id, email: employee.email };
+    const payload = { sub: newEmployee.id.toString(), email: newEmployee.email };
 
     // Retorna o token de acesso
     return {

@@ -1,4 +1,4 @@
-'use client'; // Indica que este é um componente do lado do cliente
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation'; // Para redirecionamento se o token for inválido
@@ -14,7 +14,7 @@ interface Asset { // Define a interface para um ativo
   createdAt: string; // Ou Date, dependendo do formato recebido
   updatedAt: string;
   departmentId: number;
-  // Adicione outros campos conforme definidos no backend
+  // Adicione outros campos conforme definidos no seu backend
 }
 
 export default function Dashboard() {
@@ -22,6 +22,17 @@ export default function Dashboard() {
   const [loading, setLoading] = useState<boolean>(true); // Estado para indicar carregamento
   const [error, setError] = useState<string | null>(null); // Estado para armazenar erros
   const router = useRouter(); // Hook para navegação
+
+  // Estados para o formulário de criação de ativo
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [newAsset, setNewAsset] = useState({
+    name: '',
+    assetNumber: '',
+    type: '',
+    status: 'available', // Valor padrão
+    departmentId: 1, // Valor padrão, ajuste conforme necessário
+  });
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAssetsData = async () => {
@@ -57,6 +68,52 @@ export default function Dashboard() {
     router.push('/login'); // Redireciona para a página de login
   };
 
+  // Função para abrir o modal
+  const openModal = () => {
+    setIsModalOpen(true);
+    setCreateError(null); // Limpa erro ao abrir
+  };
+
+  // Função para fechar o modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setNewAsset({ name: '', assetNumber: '', type: '', status: 'available', departmentId: 1 }); // Limpa o formulário
+    setCreateError(null); // Limpa erro ao fechar
+  };
+
+  // Função para lidar com mudanças no formulário
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewAsset(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Função para lidar com o envio do formulário de criação
+  const handleCreateAsset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateError(null); // Limpa erro anterior
+
+    try {
+      // Chama a função createAsset do apiService
+      const createdAsset = await apiService.createAsset(newAsset);
+      // Atualiza a lista de ativos adicionando o novo item
+      setAssets(prevAssets => [...prevAssets, createdAsset]);
+      // Limpa o formulário e fecha o modal
+      setNewAsset({ name: '', assetNumber: '', type: '', status: 'available', departmentId: 1 });
+      closeModal();
+      alert('Ativo criado com sucesso!');
+    } catch (err: any) {
+      console.error("Erro ao criar ativo:", err);
+      let errorMessage = 'Erro ao criar o ativo. Por favor, tente novamente.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setCreateError(errorMessage);
+    }
+  };
+
+
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
@@ -72,7 +129,16 @@ export default function Dashboard() {
       </header>
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Bem-vindo ao seu Dashboard</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Bem-vindo ao seu Dashboard</h2>
+            <button
+              onClick={openModal}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Novo Ativo
+            </button>
+          </div>
+
           {/* Bloco para exibir ativos ou mensagens de estado */}
           {loading && <p>Carregando ativos...</p>}
           {error && <p className="text-red-500">Erro: {error}</p>}
@@ -111,6 +177,100 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      {/* Modal para criar novo ativo */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Criar Novo Ativo</h3>
+              {createError && <p className="text-red-500 text-sm mb-4">{createError}</p>}
+              <form onSubmit={handleCreateAsset}>
+                <div className="mb-4">
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome *</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={newAsset.name}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="assetNumber" className="block text-sm font-medium text-gray-700">Número *</label>
+                  <input
+                    type="text"
+                    id="assetNumber"
+                    name="assetNumber"
+                    value={newAsset.assetNumber}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="type" className="block text-sm font-medium text-gray-700">Tipo *</label>
+                  <input
+                    type="text"
+                    id="type"
+                    name="type"
+                    value={newAsset.type}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status *</label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={newAsset.status}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  >
+                    <option value="available">Disponível</option>
+                    <option value="in_use">Em Uso</option>
+                    <option value="maintenance">Manutenção</option>
+                    <option value="retired">Aposentado</option>
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700">ID do Departamento *</label>
+                  <input
+                    type="number"
+                    id="departmentId"
+                    name="departmentId"
+                    value={newAsset.departmentId}
+                    onChange={handleInputChange}
+                    required
+                    min="1" // Ajuste o min/max conforme sua base de dados
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Criar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
