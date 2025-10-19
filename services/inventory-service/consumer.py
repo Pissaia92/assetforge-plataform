@@ -14,7 +14,7 @@ async def consume_checkout_events():
     connection = None
     channel = None
     try:
-        connection = await aio_pika.connect_robust("amqp://user:password@rabbitmq:5672/")
+        connection = await aio_pika.connect_robust("amqp://user:password@localhost:5672/")
         channel = await connection.channel()
 
         # Declarar a exchange (tipo direct)
@@ -85,7 +85,7 @@ async def consume_checkout_events():
     channel = None
     try:
         # Conecta ao RabbitMQ
-        connection = await aio_pika.connect_robust("amqp://user:password@rabbitmq:5672/")
+        connection = await aio_pika.connect_robust("amqp://user:password@localhost:5672/")
         channel = await connection.channel()
 
         # Declarar a fila

@@ -41,9 +41,8 @@ services:
       - RABBITMQ_URL=amqp://user:password@rabbitmq:5672 # URL interna do Docker Compose
     networks:
       - assetforge_net
-    # Se o lifecycle-service tiver endpoints HTTP, expor a porta:
-    # ports:
-    #   - "3003:3000" # Exemplo: se o lifecycle-service rodar na porta 3000 internamente
+    ports:
+    - "3003:3000"
 
 volumes:
   postgres_data:
