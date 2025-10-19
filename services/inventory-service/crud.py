@@ -30,6 +30,17 @@ def update_asset(db: Session, asset_id: int, asset_update: schemas.AssetCreate):
         db.refresh(db_asset)
     return db_asset
 
+def update_asset_status_and_assignee(db: Session, asset_id: int, new_status: str, assigned_to_id: int):    
+    # Atualiza o status e o ID do funcionário atribuído a um ativo.
+    # Retorna o ativo atualizado ou None se não encontrado.    
+    db_asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
+    if db_asset:
+        db_asset.status = new_status
+        db_asset.assigned_to = assigned_to_id
+        db.commit()
+        db.refresh(db_asset)
+    return db_asset
+
 # Função para DELETAR um ativo
 def delete_asset(db: Session, asset_id: int):
     db_asset = get_asset(db, asset_id)

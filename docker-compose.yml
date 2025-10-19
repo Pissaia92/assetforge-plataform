@@ -29,6 +29,22 @@ services:
     networks:
       - assetforge_net
 
+  # --- NOVO SERVIÇO: Lifecycle Service ---
+  lifecycle-service:
+    build:
+      context: ./services/lifecycle-service
+      dockerfile: Dockerfile
+    container_name: assetforge_lifecycle_service
+    depends_on:
+      - rabbitmq # Garante que o rabbitmq inicie primeiro
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672 # URL interna do Docker Compose
+    networks:
+      - assetforge_net
+    # Se o lifecycle-service tiver endpoints HTTP, expor a porta:
+    # ports:
+    #   - "3003:3000" # Exemplo: se o lifecycle-service rodar na porta 3000 internamente
+
 volumes:
   postgres_data:
 

@@ -1,25 +1,44 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 import crud, models, schemas
 from database import SessionLocal, engine
 import security
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+import consumer
 
 models.Base.metadata.create_all(bind=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Código executado na inicialização
+    print("Iniciando o consumidor de eventos...")
+    consumer_task = asyncio.create_task(consumer.consume_checkout_events()) # Inicia o consumidor assíncrono
+    yield # O yield é onde o FastAPI começa a receber requisições
+    # Código executado no shutdown
+    print("Parando o consumidor de eventos...")
+    consumer_task.cancel() # Cancela a tarefa do consumidor
+    try:
+        await consumer_task # Aguarda a tarefa ser cancelada
+    except asyncio.CancelledError:
+        print("Consumidor parado.")
 
 app = FastAPI(
     title="AssetForge - Inventory Service",
     description="API para gerenciamento de ativos de TI.",
     version="0.1.0",
+    lifespan=lifespan # Adiciona o lifespan ao app
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3001"],  # Permitir apenas o seu frontend
+    allow_origins=["http://localhost:3001"],  # Permitir apenas o frontend
     allow_credentials=True,
-    allow_methods=["*"],  # Permitir todos os métodos (GET, POST, PUT, DELETE, etc)
+    allow_methods=["*"],  # Permitir todos os métodos
     allow_headers=["*"],
-)    
+)
+
 # Função de Dependência do Banco de Dados
 def get_db():
     db = SessionLocal()
@@ -75,3 +94,8 @@ def delete_existing_asset(
     if db_asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
     return db_asset
+
+# Endpoint raiz para verificar se a API está no ar.
+@app.get("/")
+def read_root():
+    return {"message": "AssetForge - Inventory Service is running!"}
