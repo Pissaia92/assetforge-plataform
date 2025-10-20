@@ -1,4 +1,3 @@
-// src/auth/auth.service.ts
 import {
   Injectable,
   BadRequestException,
@@ -9,28 +8,26 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SignUpDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
-import { Employee } from '@prisma/client';
-import { JwtService } from '@nestjs/jwt'; // O serviço que será injetado
+import { Employee } from '@prisma/client'; // Importa o tipo 'Employee'
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  // O construtor agora recebe ambos os serviços
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
 
-  // O método signUp permanece o mesmo...
-  async signUp(
-    signUpDto: SignUpDto,
-  ): Promise<Omit<Employee, 'password'>> {
+  async signUp(signUpDto: SignUpDto): Promise<Omit<Employee, 'password'>> {
     const { email, name, password, departmentId } = signUpDto;
 
     const department = await this.prisma.department.findUnique({
       where: { id: departmentId },
     });
     if (!department) {
-      throw new BadRequestException(`Department with ID ${departmentId} not found.`);
+      throw new BadRequestException(
+        `Department with ID ${departmentId} not found.`,
+      );
     }
 
     const existingEmployee = await this.prisma.employee.findUnique({
@@ -42,7 +39,8 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const employee = await this.prisma.employee.create({
+    const newEmployee = await this.prisma.employee.create({
+      // Usei 'newEmployee' para evitar confusão com a instância do login
       data: {
         email,
         name,
@@ -51,7 +49,7 @@ export class AuthService {
       },
     });
 
-    const { password: _, ...result } = employee;
+    const { password: _, ...result } = newEmployee;
     return result;
   }
 
@@ -59,6 +57,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
+    // Busca o funcionário pelo email
     const employee = await this.prisma.employee.findUnique({
       where: { email },
     });
@@ -66,14 +65,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordMatching = await bcrypt.compare(password, employee.password);
+    // Compara a senha fornecida com a senha armazenada
+    const isPasswordMatching = await bcrypt.compare(
+      password,
+      employee.password, // Usa a instância 'employee', não o tipo 'Employee'
+    );
     if (!isPasswordMatching) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { sub: newEmployee.id.toString(), email: newEmployee.email };
+    // Cria o payload do JWT usando os dados da instância 'employee' encontrada
+    const payload = {
+      sub: employee.id.toString(), // <-- CORREÇÃO: Use 'employee.id', não 'Employee.id'
+      email: employee.email, // <-- CORREÇÃO: Use 'employee.email', não 'Employee.email'
+    };
 
-    // Retorna o token de acesso
+    // Retorna o token de acesso gerado
     return {
       access_token: await this.jwtService.signAsync(payload),
     };

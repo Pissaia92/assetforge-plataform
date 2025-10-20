@@ -20,7 +20,7 @@ export class CheckoutController {
   constructor(private readonly checkoutService: CheckoutService) {}
 
   @Post()
-  @HttpCode(HttpStatus.OK) // Ou CREATED, dependendo da semântica desejada
+  @HttpCode(HttpStatus.OK) // Ou CREATED
   async checkoutAsset(@Body() checkoutData: CheckoutRequestDto) {
     const { assetId, employeeId } = checkoutData;
 

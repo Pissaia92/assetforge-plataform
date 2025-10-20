@@ -2,6 +2,8 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 const INVENTORY_BASE_URL = process.env.NEXT_PUBLIC_INVENTORY_BASE_URL || 'http://localhost:8000';
+// Adicione uma variável de ambiente para o lifecycle-service
+const LIFECYCLE_BASE_URL = process.env.NEXT_PUBLIC_LIFECYCLE_BASE_URL || 'http://localhost:3003'; // URL do lifecycle-service
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -80,6 +82,30 @@ export const apiService = {
             throw error;
         }
         // Lança outros erros genéricos
+        throw error;
+    }
+  },
+
+  // --- NOVA FUNÇÃO: Checkout de Ativo ---
+  checkoutAsset: async (checkoutData: { assetId: number; employeeId: number }) => {
+    // O checkout NÃO requer o token JWT do usuário logado para autenticação no lifecycle-service,
+    // pois o lifecycle-service apenas publica o evento. A autorização da ação (checkout)
+    // pode ser feita internamente no lifecycle-service ou no consumidor (inventory-service).
+    // Para este exemplo, vamos assumir que o lifecycle-service apenas aceita o evento.
+    // Se o lifecycle-service exigir autenticação, adicione a lógica de token aqui também.
+
+    const lifecycleApi = axios.create({
+      baseURL: LIFECYCLE_BASE_URL, // Usa a URL do Serviço de Ciclo de Vida
+    });
+
+    // Define o Content-Type
+    lifecycleApi.defaults.headers.post['Content-Type'] = 'application/json';
+
+    try {
+      const response = await lifecycleApi.post('/checkout', checkoutData); // Faz a requisição POST para /checkout
+      return response.data; // Retorna a resposta do lifecycle-service
+    } catch (error: any) {
+        // Lança o erro para que o componente possa lidar
         throw error;
     }
   }

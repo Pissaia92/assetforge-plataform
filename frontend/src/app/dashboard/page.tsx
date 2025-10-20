@@ -14,7 +14,14 @@ interface Asset { // Define a interface para um ativo
   createdAt: string; // Ou Date, dependendo do formato recebido
   updatedAt: string;
   departmentId: number;
-  // Adicione outros campos conforme definidos no seu backend
+  // Adicione outros campos conforme definidos no backend
+}
+
+// Defina também uma interface para o funcionário, se necessário
+interface Employee {
+  id: number;
+  name: string;
+  email: string;
 }
 
 export default function Dashboard() {
@@ -23,16 +30,13 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null); // Estado para armazenar erros
   const router = useRouter(); // Hook para navegação
 
-  // Estados para o formulário de criação de ativo
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [newAsset, setNewAsset] = useState({
-    name: '',
-    assetNumber: '',
-    type: '',
-    status: 'available', // Valor padrão
-    departmentId: 1, // Valor padrão, ajuste conforme necessário
+  // --- ESTADOS PARA DESIGNAÇÃO DE ATIVO ---
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState<boolean>(false);
+  const [checkoutData, setCheckoutData] = useState({
+    assetId: 0,
+    employeeId: 0, 
   });
-  const [createError, setCreateError] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAssetsData = async () => {
@@ -68,51 +72,45 @@ export default function Dashboard() {
     router.push('/login'); // Redireciona para a página de login
   };
 
-  // Função para abrir o modal
-  const openModal = () => {
-    setIsModalOpen(true);
-    setCreateError(null); // Limpa erro ao abrir
+  // --- FUNÇÕES PARA DESIGNAÇÃO DE ATIVO ---
+  const openCheckoutModal = () => {
+    setIsCheckoutModalOpen(true);
+    setCheckoutError(null);
+    // Pode-se pré-selecionar o primeiro ativo ou funcionário, se desejado
   };
 
-  // Função para fechar o modal
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setNewAsset({ name: '', assetNumber: '', type: '', status: 'available', departmentId: 1 }); // Limpa o formulário
-    setCreateError(null); // Limpa erro ao fechar
+  const closeCheckoutModal = () => {
+    setIsCheckoutModalOpen(false);
+    setCheckoutData({ assetId: 0, employeeId: 0 }); // Limpa o formulário
+    setCheckoutError(null);
   };
 
-  // Função para lidar com mudanças no formulário
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setNewAsset(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Função para lidar com o envio do formulário de criação
-  const handleCreateAsset = async (e: React.FormEvent) => {
+  const handleCheckoutAsset = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreateError(null); // Limpa erro anterior
+    setCheckoutError(null);
+
+    if (checkoutData.assetId <= 0 || checkoutData.employeeId <= 0) {
+      setCheckoutError("Por favor, selecione um ativo e insira um ID de funcionário válidos.");
+      return;
+    }
 
     try {
-      // Chama a função createAsset do apiService
-      const createdAsset = await apiService.createAsset(newAsset);
-      // Atualiza a lista de ativos adicionando o novo item
-      setAssets(prevAssets => [...prevAssets, createdAsset]);
-      // Limpa o formulário e fecha o modal
-      setNewAsset({ name: '', assetNumber: '', type: '', status: 'available', departmentId: 1 });
-      closeModal();
-      alert('Ativo criado com sucesso!');
+      // Chama a nova função no apiService para checkout
+      await apiService.checkoutAsset(checkoutData);
+      alert('Ativo designado com sucesso!');
+      closeCheckoutModal();
+      fetchAssetsData(); // Descomente se quiser atualizar automaticamente
     } catch (err: any) {
-      console.error("Erro ao criar ativo:", err);
-      let errorMessage = 'Erro ao criar o ativo. Por favor, tente novamente.';
+      console.error("Erro ao designar ativo:", err);
+      let errorMessage = 'Erro ao designar o ativo. Por favor, tente novamente.';
       if (err.response && err.response.data && err.response.data.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
         errorMessage = err.message;
       }
-      setCreateError(errorMessage);
+      setCheckoutError(errorMessage);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -131,12 +129,20 @@ export default function Dashboard() {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Bem-vindo ao seu Dashboard</h2>
-            <button
-              onClick={openModal}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Novo Ativo
-            </button>
+            <div className="space-x-2">
+              <button
+                onClick={openCheckoutModal} // Abre o modal de checkout
+                className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Designar Ativo
+              </button>
+              <button
+                onClick={() => router.push('/dashboard/create-asset')} // Exemplo de link para criar ativo
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Novo Ativo
+              </button>
+            </div>
           </div>
 
           {/* Bloco para exibir ativos ou mensagens de estado */}
@@ -156,7 +162,7 @@ export default function Dashboard() {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      {/* Adicione mais colunas conforme necessário */}
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Atribuído a</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -167,7 +173,7 @@ export default function Dashboard() {
                         <td className="px-6 py-4 whitespace-nowrap">{asset.assetNumber}</td>
                         <td className="px-6 py-4 whitespace-nowrap">{asset.type}</td>
                         <td className="px-6 py-4 whitespace-nowrap">{asset.status}</td>
-                        {/* Adicione mais células conforme necessári */}
+                        <td className="px-6 py-4 whitespace-nowrap">{asset.assignedTo || 'N/A'}</td> {/* Mostra 'N/A' se não estiver atribuído */}
                       </tr>
                     ))}
                   </tbody>
@@ -178,83 +184,50 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Modal para criar novo ativo */}
-      {isModalOpen && (
+      {/* Modal para Designar Ativo (AJUSTADO) */}
+      {isCheckoutModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Criar Novo Ativo</h3>
-              {createError && <p className="text-red-500 text-sm mb-4">{createError}</p>}
-              <form onSubmit={handleCreateAsset}>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Designar Ativo</h3>
+              {checkoutError && <p className="text-red-500 text-sm mb-4">{checkoutError}</p>}
+              <form onSubmit={handleCheckoutAsset}>
                 <div className="mb-4">
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome *</label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={newAsset.name}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label htmlFor="assetNumber" className="block text-sm font-medium text-gray-700">Número *</label>
-                  <input
-                    type="text"
-                    id="assetNumber"
-                    name="assetNumber"
-                    value={newAsset.assetNumber}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700">Tipo *</label>
-                  <input
-                    type="text"
-                    id="type"
-                    name="type"
-                    value={newAsset.type}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status *</label>
+                  <label htmlFor="assetId" className="block text-sm font-medium text-gray-700">Ativo *</label>
                   <select
-                    id="status"
-                    name="status"
-                    value={newAsset.status}
-                    onChange={handleInputChange}
+                    id="assetId"
+                    name="assetId"
+                    value={checkoutData.assetId}
+                    onChange={(e) => setCheckoutData(prev => ({ ...prev, assetId: Number(e.target.value) }))}
                     required
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   >
-                    <option value="available">Disponível</option>
-                    <option value="in_use">Em Uso</option>
-                    <option value="maintenance">Manutenção</option>
-                    <option value="retired">Aposentado</option>
+                    <option value={0}>Selecione um ativo</option>
+                    {assets.map((asset) => (
+                      <option key={asset.id} value={asset.id}>
+                        {asset.name} ({asset.assetNumber})
+                      </option>
+                    ))}
                   </select>
                 </div>
+                {/* CAMPO PARA EMPLOYEE ID MANUAL */}
                 <div className="mb-4">
-                  <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700">ID do Departamento *</label>
+                  <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700">ID do Funcionário *</label>
                   <input
+                    id="employeeId"
+                    name="employeeId"
                     type="number"
-                    id="departmentId"
-                    name="departmentId"
-                    value={newAsset.departmentId}
-                    onChange={handleInputChange}
+                    min="1" // Ajuste o min/max conforme base de dados
+                    value={checkoutData.employeeId}
+                    onChange={(e) => setCheckoutData(prev => ({ ...prev, employeeId: Number(e.target.value) }))}
                     required
-                    min="1" // Ajuste o min/max conforme sua base de dados
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
                 <div className="flex justify-end space-x-3">
                   <button
                     type="button"
-                    onClick={closeModal}
+                    onClick={closeCheckoutModal}
                     className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
                   >
                     Cancelar
@@ -263,7 +236,7 @@ export default function Dashboard() {
                     type="submit"
                     className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
                   >
-                    Criar
+                    Designar
                   </button>
                 </div>
               </form>

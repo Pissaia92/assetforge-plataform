@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { AssetCheckedOutEvent } from '../events/asset-checked-out.event'; // Importa a interface do evento
+import { AssetCheckedOutEvent } from '../events/asset-checked-out.event';
 
 @Injectable()
 export class CheckoutService {
@@ -11,14 +11,14 @@ export class CheckoutService {
   ) {}
 
   /**
-   * Publica um evento de checkout de ativo no RabbitMQ.
+
    * @param checkoutData - Dados do checkout contendo assetId e employeeId.
    */
   async publishCheckoutEvent(checkoutData: {
     assetId: number;
     employeeId: number;
   }): Promise<void> {
-    const { assetId, employeeId } = checkoutData; // Desestrutura o objeto recebido
+    const { assetId, employeeId } = checkoutData;
 
     // Validação básica dos dados de entrada (opcional, mas recomendado)
     if (!assetId || !employeeId) {
@@ -26,13 +26,13 @@ export class CheckoutService {
         assetId,
         employeeId,
       });
-      throw new Error('assetId e employeeId são obrigatórios para checkout.'); // Ou use uma exceção específica do NestJS
+      throw new Error('assetId e employeeId são obrigatórios para checkout.'); // Ou uma exceção específica do NestJS
     }
 
     const event: AssetCheckedOutEvent = {
       assetId,
       employeeId,
-      timestamp: new Date().toISOString(), // Use ISOString para padronizar o formato da data
+      timestamp: new Date().toISOString(),
     };
 
     this.logger.log(
